@@ -1,0 +1,27 @@
+th, td {
+    border: 2px solid black;
+    padding: 3px;
+    background-color: cadetblue;
+}
+.pagination {
+    display: flex;
+    list-style: none;
+}
+.active {
+    background-color: green;
+}
+input[type="text"], #race-n1, #prof-n1, #level-n1, #birthday-n1, #ban-n1 {
+    width: 300px;
+    padding: 3px;
+    text-align: right;
+}
+#create-n1 {
+    clear: both;
+    text-align: right;
+}
+label {
+    float: left;
+}
+.main{
+    float: left;
+}

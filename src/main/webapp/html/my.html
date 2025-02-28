@@ -2,10 +2,317 @@
 <head>
     <title>RPG</title>
     <script src=https://code.jquery.com/jquery-3.6.0.min.js></script>
-    <link href="/css/my.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/my.css">
 </head>
-<body>
+
+<body onload="show_list(0)">
 <h1>RPG admin panel</h1>
+<h1>Accounts list:</h1>
+<!-- Создаем выпадающий список -->
+<label for="count-select1">Count per page:</label>
+<!-- Атрибут onchange нужен для загрузки новых строк в таблицу -->
+<select name="count" id="count-select1" onchange="show_list(0)">
+    <option value="3">3</option>
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="15">15</option>
+    <option value="20">20</option>
+</select>
+
+<table id="table1">
+    <tr>
+        <th>#</th>
+        <th>Name</th>
+        <th>Title</th>
+        <th>Race</th>
+        <th>Profession</th>
+        <th>Level</th>
+        <th>Birthday</th>
+        <th>Banned</th>
+        <th>Edit</th>
+        <th>Delete</th>
+    </tr>
+</table>
+
+<div id="pages1">Pages:</div>
+
+<hr>
+
+<h1>Create new account:</h1>
+<div class="main">
+<form id = "create-n1">
+    <label for="name-n1">Name:</label>
+    <input type="text" required id="name-n1" name="name" minlength="1" maxlength="12">
+    <br><br>
+
+    <label for="title-n1">Title:</label>
+    <input type="text" required id="title-n1" name="title" minlength="1" maxlength="30">
+    <br><br>
+
+    <label for="race-n1">Race:</label>
+    <select name="race" id="race-n1"></select>
+    <br><br>
+
+    <label for="prof-n1">Race:</label>
+    <select name="prof" id="prof-n1"></select>
+    <br><br>
+
+    <label for="level-n1">Level:</label>
+    <input type="number" required id="level-n1" name="level" min="0" max="100">
+    <br><br>
+
+    <label for="birthday-n1">Birthday:</label>
+    <input type="date" required id="birthday-n1" name="birthday" min="2000-01-01" max="3000-12-31">
+    <br><br>
+
+    <label for="ban-n1">Banned:</label>
+    <select name="prof" id="ban-n1"></select>
+    <br><br>
+
+    <input type="image" id="save-n1" src="/img/save.png" alt="Save" onclick="createAcc()">
+</form>
+</div>
+
+<script>
+    const raceList = ["HUMAN", "DWARF", "ELF", "GIANT", "ORC", "TROLL", "HOBBIT"];
+    const professionList =["WARRIOR", "ROGUE", "SORCERER", "CLERIC", "PALADIN", "NAZGUL", "WARLOCK", "DRUID"];
+    const bannedList =["true", "false"];
+
+    function show_list(page_number) {
+        document.getElementById("race-n1").options.length=0;
+        document.getElementById("prof-n1").options.length=0;
+        document.getElementById("ban-n1").options.length=0;
+        fillingDropDownList("race-n1", raceList);
+        fillingDropDownList("prof-n1", professionList);
+        fillingDropDownList("ban-n1", bannedList);
+
+        <!--Для того чтобы не накапливалась таблица-->
+        $("tr:has(td)").remove();
+
+        <!--Получение параметра из выпадающего списка-->
+        let perPage = $("#count-select1").val();
+        <!--Безопасность если вдруг что-->
+        if (perPage == null) {
+            perPage = 3;
+        }
+        if (page_number == null) {
+            page_number = 0;
+        }
+
+        <!--? знак нужен для добавления параметров в url-->
+        let url = "/rest/players";
+
+        <!--Параметры в url, 1-из выпадающего стписка, 2-номер страници-->
+        url = url.concat("?pageSize=" + perPage + "&pageNumber=" + page_number);
+
+        $.get(url, function (data) {
+            $.each(data, function (key, value) {
+                let date = new Date(value.birthday);
+                $('<tr>').html("<td>"
+                    + value.id + "</td><td>"
+                    + value.name + "</td><td>"
+                    + value.title + "</td><td>"
+                    + value.race + "</td><td>"
+                    + value.profession + "</td><td>"
+                    + value.level + "</td><td>"
+                    + (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear() + "</td><td>"
+                    + value.banned + "</td><td>"
+                    + "<button id='but_ed_"+value.id+"' onclick='editAcc("+ value.id + ")'>"
+                    + "<img src='img/edit.png' alt='Edit'>"
+                    + "</button>" + "</td><td>"
+                    + "<button id='but_del_"+value.id+"' onclick='deleteAccount("+ value.id + ")'>"
+                    + "<img src='img/delete.png' alt='Delete'>"
+                    + "</button>"+ "</td>"
+            ).appendTo("#table1");
+            });
+        });
+        let totalCount = getTotalCount();
+
+        <!--Расчет количества листов при определенном параметре выпадающего списка-->
+        let countlist = Math.ceil(totalCount / perPage);
+        console.log("count list:"+countlist);
+
+        <!--Для того чтобы не накапливались кнопки-->
+        $("button.png-but-stile").remove();
+
+        <!--Создание, программирование и добавление кнопки-->
+        for (let i = 0; i < countlist; i++) {
+            <!--Созданиее-->
+            let button_tag = "<button>" + (i + 1) + "</button>";
+            <!--Программироване-->
+            let but = $(button_tag)
+                .attr('id', "paging_button_" + i)
+                .attr('onclick', "show_list(" + i + ")")
+                .addClass('png-but-stile');
+            <!--Добавление-->
+            $("#pages1").append(but);
+        }
+        <!--Формирование id и добавление класса к активной странице-->
+        let idActiveBut = "#paging_button_" + page_number;
+        $(idActiveBut).addClass('active');
+    }
+
+    <!-- Общее количество Users на сервере -->
+    function getTotalCount() {
+        let url = "/rest/players/count";
+        let resultCount = 0;
+        $.ajax({
+            url: url,
+            async: false,
+            success: function (count) {
+                console.log("count user:"+count);
+                resultCount = count;
+            }
+        })
+        console.log("verification count user:"+resultCount);
+        return resultCount;
+    }
+    <!--Delete-запрос на удаление аккаунта-->
+    function deleteAccount(id){
+        let url = "/rest/players/"+ id;
+        $.ajax({
+            url: url,
+            type: "DELETE",
+            success: function (){
+                show_list(getCurrentPage());
+            }
+        })
+    }
+    <!--Определение страницы на которой нажата кнопка Delete-->
+    function getCurrentPage(){
+        let current_page = 1;
+        $('button:parent(div)').each(function (){
+           if(this.classList.contains("active")){
+               current_page = $(this).text();
+           }
+        });
+        return parseInt(current_page)-1;
+    }
+
+    function editAcc(id){
+        let butEdId = "#but_ed_"+id
+        let butDelId = "#but_del_"+id
+        let save_img_tag = "<img src='/img/save.png'>";
+        $(butDelId).hide();
+        $(butEdId).html(save_img_tag);
+
+        <!--Получение родетеля начатой кнопки-->
+        let element = $(butEdId).closest('tr');
+        <!--Получение всех детей родителя-->
+        let children = element.children();
+
+        <!--Работа с ячейкой Name-->
+        let idNameField = "input_name_"+ id;
+        editTextField(children[1], idNameField);
+
+        <!--Работа с ячейкой Title-->
+        let idTitleField = "input_title_"+ id;
+        editTextField(children[2],idTitleField);
+
+        <!--Работа с ячейкой Race-->
+        let idRaceField = "select_race_"+ id;
+        let raceLabel = 'race';
+        editListField(children[3],idRaceField, raceList, raceLabel);
+
+        <!--Работа с ячейкой Profession-->
+        let idProfField = "select_prof_"+ id;
+        let profLabel = 'prof';
+        editListField(children[4],idProfField, professionList, profLabel);
+
+        <!--Работа с ячейкой Banned-->
+        let idBannedField = "select_ban_"+ id;
+        let banLabel = 'ban';
+        editListField(children[7],idBannedField, bannedList, banLabel);
+
+        <!--Работа с сохранением-->
+        let property_save_tag = "saveAcc(" +id+")";
+        $(butEdId).attr('onclick', property_save_tag);
+
+    }
+
+    function editTextField(children, idField){
+        children.innerHTML = "<input id='"+idField+"' type='text' value='"+ children.innerHTML + "'>";
+    }
+
+    function editListField(children, idField, elementList, nameLabel){
+        let currentValue = children.innerHTML;
+        children.innerHTML=createDropDownList(idField, nameLabel);
+        fillingDropDownList(idField, elementList);
+        $("#"+idField).val(currentValue).change();
+    }
+
+    function createDropDownList(idField, nameLabel){
+        return "<label for='"+nameLabel+"'></label>"
+            + "<select name='"+nameLabel+"' id='"+idField+"'>"
+            + "</select>"
+    }
+
+    function fillingDropDownList(idField, elementList) {
+        let select = document.getElementById(idField);
+        for (let i=0; i<elementList.length; i++){
+            let option = elementList[i];
+            let el = document.createElement("option");
+            el.textContent = option;
+            el.value = option;
+            select.appendChild(el);
+        }
+    }
+
+    function saveAcc(id){
+        let fieldName = $("#input_name_"+id).val();
+        let fieldTitle = $("#input_title_"+id).val();
+        let fieldRace = $("#select_race_"+id).val();
+        let fieldProf = $("#select_prof_"+id).val();
+        let fieldBan = $("#select_ban_"+id).val();
+
+        let url = "/rest/players/" + id;
+        let json = JSON.stringify({"name": fieldName,
+            "title": fieldTitle,
+            "race": fieldRace,
+            "profession": fieldProf,
+            "banned": fieldBan});
+        storageRequest(json, url);
+
+    }
+
+    function createAcc() {
+        let fieldName = $("#name-n1").val();
+        let fieldTitle = $("#title-n1").val();
+        let fieldRace = $("#race-n1").val();
+        let fieldProf = $("#prof-n1").val();
+        let fieldLevel = $("#level-n1").val();
+        let fieldBirthday = $("#birthday-n1").val();
+        let fieldBan = $("#ban-n1").val();
+
+        <!--Url текущей страницы-->
+        let current_page = window.location.href;
+        let url = "/rest/players/";
+        let json = JSON.stringify({"name": fieldName,
+            "title": fieldTitle,
+            "race": fieldRace,
+            "profession": fieldProf,
+            "level": fieldLevel,
+            "birthday": new Date(fieldBirthday).getTime(),
+            "banned": fieldBan});
+        storageRequest(json, url);
+
+    }
+
+    function storageRequest(json, url){
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json;charset=UTF-8',
+            async: false,
+            data: json,
+            success(){
+                show_list(getCurrentPage());
+            }
+        });
+    }
+</script>
+
 
 </body>
 </html>
